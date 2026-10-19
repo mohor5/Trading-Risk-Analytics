@@ -4,8 +4,9 @@ import statistics
 import unittest
 
 from db import connect
-from risk import (annualized_volatility, historical_var, max_drawdown,
-                  portfolio_returns)
+from risk import (annualized_volatility, drawdown_series, historical_var,
+                  holdings_summary, max_drawdown, portfolio_returns,
+                  portfolio_value_series)
 
 
 def tiny_db():
@@ -51,6 +52,33 @@ class TestRisk(unittest.TestCase):
             historical_var([0.1], confidence=1.5)
         with self.assertRaises(ValueError):
             annualized_volatility([0.1])
+
+
+class TestSeries(unittest.TestCase):
+    def test_value_series(self):
+        series = portfolio_value_series(tiny_db())
+        self.assertEqual(len(series), 4)
+        self.assertAlmostEqual(series[1]["value"], 1100)
+
+    def test_drawdown_series(self):
+        series = drawdown_series(tiny_db())
+        self.assertEqual(series[0]["drawdown"], 0)
+        self.assertAlmostEqual(min(s["drawdown"] for s in series), -0.1)
+
+    def test_holdings_summary_single_stock(self):
+        rows = holdings_summary(tiny_db())
+        self.assertEqual(len(rows), 1)
+        self.assertAlmostEqual(rows[0]["market_value"], 1089)
+        self.assertAlmostEqual(rows[0]["weight"], 1.0)
+
+    def test_holdings_weights_sum_to_one(self):
+        conn = tiny_db()
+        conn.execute("INSERT INTO stocks(symbol) VALUES ('BBB')")
+        conn.execute("INSERT INTO prices VALUES ('BBB', '2024-01-04', 50)")
+        conn.execute("INSERT INTO holdings VALUES ('BBB', 20)")
+        rows = holdings_summary(conn)
+        self.assertAlmostEqual(sum(r["weight"] for r in rows), 1.0)
+        self.assertEqual(rows[0]["symbol"], "AAA")  # largest first
 
 
 class TestSchema(unittest.TestCase):

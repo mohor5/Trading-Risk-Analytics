@@ -45,3 +45,17 @@ SELECT trade_date, value, peak, value / peak - 1 AS drawdown
 FROM p
 ORDER BY trade_date
 """
+
+# Each holding valued at its most recent close.
+HOLDINGS_SQL = """
+SELECT h.symbol,
+       h.quantity,
+       p.close AS latest_close,
+       h.quantity * p.close AS market_value
+FROM holdings h
+JOIN prices p ON p.symbol = h.symbol
+WHERE p.trade_date = (SELECT MAX(trade_date)
+                      FROM prices
+                      WHERE symbol = h.symbol)
+ORDER BY market_value DESC
+"""

@@ -6,8 +6,8 @@ from pathlib import Path
 SCHEMA = Path(__file__).parent / "schema.sql"
 
 
-def connect(path=":memory:"):
-    conn = sqlite3.connect(path)
+def connect(path=":memory:", check_same_thread=True):
+    conn = sqlite3.connect(path, check_same_thread=check_same_thread)
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA.read_text())
     return conn
